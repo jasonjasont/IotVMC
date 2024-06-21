@@ -34,13 +34,15 @@ const char *password = "CoursAssembleur$*";
 
 WiFiServer serveur(80);
 
-String generateHTMLPage() {
-    String pageHtml = "<html><body>";
-    pageHtml += "<h1>Données du capteur</h1>";
-    pageHtml += "<p>Température: " + String(sensor1Data.temperature,2) + " °C</p>";
-    pageHtml += "<p>Humidité: " + String(sensor1Data.humidity,1) + " %</p>";
-    pageHtml += "</body></html>";
-    return pageHtml;
+String generateHTMLPage()
+{
+  String pageHtml = "<html><body>";
+  pageHtml += "<h1>Données du capteur</h1>";
+  pageHtml += "<p>Température: " + String(sensor1Data.temperature, 2) + " °C</p>";
+  pageHtml += "<p>Humidité: " + String(sensor1Data.humidity, 1) + " %</p>";
+  pageHtml += "<form action=\"/eteindre\" method=\"get\"><input type=\"submit\" value=\"Eteindre la LED\"></form>";
+  pageHtml += "</body></html>";
+  return pageHtml;
 }
 
 /**
@@ -119,13 +121,13 @@ void setup()
   WiFi.begin(ssid, password);
 
   // Tant que l'état n'est pas connecté, attendre...
-  while (WiFi.status() != WL_CONNECTED) 
+  while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
     Serial.print(".");
   }
 
-   // Une fois connecté, on affiche l'adresse IP du ESP32
+  // Une fois connecté, on affiche l'adresse IP du ESP32
   Serial.println("");
   Serial.println("Connecté au Wi-fi");
   Serial.println("Adresse IP = ");
@@ -135,11 +137,6 @@ void setup()
 
 } // End of setup.
 
-/**
- * loop
- * Arduino loop function, called once 'setup' is complete (your own code
- * should go here)
- */
 void loop()
 {
   if (gotNewTemperature)
@@ -173,28 +170,31 @@ void loop()
   // Regarde s'il y a un client sur le serveur
   WiFiClient client = serveur.available();
 
-  if(client)
+  if (client)
   {
     Serial.println("Nouveau Client.");
     // rester dans la boucle tant que le client est connecté
-    while (client.connected()) 
-    { 
-     if (client.available()) // Vérifie si le client a envoyé des données
-     {
-        char rxData = client.read();  
-        Serial.write(rxData);         
-        if (rxData == '\n') // si c'.est la fin de la commande reçue
-        {
-          Serial.println("");
-          Serial.println("Charge page HTML");
-          client.println("HTTP/1.1 200 OK"); //send new page
-          client.println("Content-Type: text/html");
+    while (client.connected())
+    {
+       if (client.available()) // Vérifie si le client a envoyé des données
+            {
+                String request = client.readStringUntil('\r');
+                Serial.println(request);
+                client.flush();
 
-          client.println();
-          client.print(generateHTMLPage());     
-          client.stop();
-        }
-     }
+                if (request.indexOf("/eteindre") != -1)  {
+                    digitalWrite(LED_PIN, LOW); // Éteignez la LED
+                }
+
+                Serial.println("Charge page HTML");
+                client.println("HTTP/1.1 200 OK"); //send new page
+                client.println("Content-Type: text/html");
+
+                client.println();
+                client.print(generateHTMLPage());     
+                client.stop();
+            }
+      }
     }
   }
-} // End of loop
+ // End of loop
